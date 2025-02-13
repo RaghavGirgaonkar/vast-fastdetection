@@ -80,7 +80,10 @@ def _main():
             logger.warning('You can download the visibility manually. ')
             continue
         
-        format_casa_modeling(args, config)
+        if config['MACHINE'] == 'ozstar':
+            format_casa_modeling(args, config)
+        elif config['MACHINE'] == 'mortimer':
+            format_casa_modeling_mortimer(args, config)
         format_casa_imgfast(args, config)
         prepare_downloads(args, sbid, cat, img, vis)
 
@@ -88,6 +91,8 @@ def _main():
             format_bash(args, config, sbid, vis, cat)
         elif config['MACHINE'] == 'ozstar':
             format_ozstar(args, config, sbid, vis, cat)
+        elif config['MACHINE'] == 'mortimer':
+            format_mortimer(args, config, sbid, vis, cat)
 
         logger.info('SB%s preparation finish.', sbid)
 
@@ -266,6 +271,52 @@ def format_ozstar(args, config, sbid, vis, cat):
                 
             logger.info('Writing {}'.format(savename))
 
+def format_mortimer(args, config, sbid, vis, cat):
+    ############################
+    # Generate scripts for one beam data on Mortimer
+    ############################
+    for idx in range(36):
+        oname = f'SB{sbid}_beam{idx:02d}'
+
+        for step in args.steps:
+            logger.debug('%s: Run VASTER step %s...', oname, step)
+
+            if step == 'GETDATA' or step == 'UNTAR':
+                savename = os.path.join(args.paths['path_scripts'], f'bash_{step}_beam{idx:02d}.sh')
+                with open(savename, 'w') as fw:
+                    write_basetxt_bash(fw, sbid, savename)
+                    url = get_url(vis[idx]['access_url'], args.username, args.password)
+                    filename = vis[idx]['filename']
+                    if step == 'GETDATA':
+                        write_download_vis_txt(args, fw, idx, filename, url)
+                    elif step == 'UNTAR':
+                        write_untar_vis_txt(args, fw, idx, filename)
+
+            else:
+                params, savename = prepare_steps_mortimer(args, idx, config, sbid, oname, step)
+                with open(savename, 'w') as fw:
+                    write_basetxt_mortimer(fw, sbid, savename, params)
+                    if step == 'FIXDATA':
+                        write_moduleload_mortimer(fw, config)
+                        write_fixdata_txt(args, fw, idx, filename, prefix='srun time ')
+                        write_module_unload_ozstar(fw)
+                    elif step == 'MODELING':
+                        write_moduleload_mortimer(fw, config)
+                        write_run_casa_txt(args, fw, idx, filename, oname, config, mode='modeling', prefix='srun time ')
+                    elif step == 'IMGFAST':
+                        write_moduleload_mortimer(fw, config)
+                        write_run_casa_txt(args, fw, idx, filename, oname, config, mode='imaging', prefix='srun time ')
+                    elif step == 'SELCAND':
+                        write_moduleload_mortimer(fw, config)
+                        write_selcand_txt(args, fw, idx, oname, cat, prefix='srun time ')
+                        write_module_unload_ozstar(fw)
+                    elif step == 'CLNDATA':
+                        write_clndata_txt(args, fw, idx)
+                        
+                    #write_endtxt_ozstar(fw, sbid, savename, params)
+                
+            logger.info('Writing {}'.format(savename))
+
 
 
 def prepare_downloads(args, sbid, cat, img, vis):
@@ -302,6 +353,28 @@ def format_casa_modeling(args, config):
 
         write_casa_subtract_model(fw)
         write_casa_exportfits(params, fw)
+
+def format_casa_modeling_mortimer(args, config):
+    # modeling 
+    savename = os.path.join(args.paths['path_scripts'], 'casa_model_making.py')
+    params = get_modeling_params(config)
+    with open(savename, 'w') as fw:  
+        write_casa_params_mortimer(args, params, fw)
+        logger.info('Writing {}'.format(savename))
+
+        if config['RESETMODEL']:
+            write_casa_reset_vis(fw)
+
+        write_casa_tclean(fw)
+
+        if config['CAL']:
+            write_casa_calib(config['SELFCAL'], fw)
+        
+        #Clean again after phasecal application
+        write_casa_tclean(fw, imagename='selfcalimagename')
+
+        write_casa_subtract_model(fw)
+        write_casa_exportfits(params, fw, imagename='selfcalimagename')
 
 
 def format_casa_imgfast(args, config):
@@ -345,6 +418,23 @@ def write_basetxt_ozstar(fw, sbid, savename, params):
     fw.write('#SBATCH --export=all' + '\n')
     fw.write('\n')
 
+def write_basetxt_mortimer(fw, sbid, savename, params):
+    logger.debug('write base txt ozstar for SB%s saving to %s', sbid, savename)
+    logger.debug(params)
+    fw.write("#!/bin/bash" + '\n')
+    fw.write('#\n')
+    #fw.write('#SBATCH --time=' + str(params['TIME'])  + '\n')
+    fw.write('#SBATCH --job-name=' + str(params['job_name']) + '\n')
+    fw.write('#SBATCH --nodes=' + str(params['NODES']) + '\n')
+    #fw.write('#SBATCH --ntasks-per-node=' + str(params['NTASKS']) + '\n')
+    #fw.write('#SBATCH --mem-per-cpu=' + str(params['MEM']) + '\n')
+    fw.write('#SBATCH --output='+ str(params['output']) + '\n')
+    fw.write('#SBATCH --error='+ str(params['error']) + '\n')
+    fw.write('#SBATCH --export=all' + '\n')
+    fw.write('#SBATCH --mail-type=all' + '\n')
+    fw.write('#SBATCH --mail-user='+ str(params['email']) + '\n')
+    fw.write('\n')
+
 def write_endtxt_ozstar(fw, sbid, savename, params):
     logger.debug('write end txt ozstar for SB%s saving to %s', sbid, savename)
     logger.debug(params)
@@ -356,6 +446,12 @@ def write_endtxt_ozstar(fw, sbid, savename, params):
 def write_moduleload_ozstar(fw, config):
     fw.write('source ' + config['CONDA'] + '\n')
     fw.write('conda activate ' + config['CONDAENV'] + '\n')
+    fw.write('\n')
+
+def write_moduleload_mortimer(fw, config):
+    fw.write('source ' + config['CONDA'] + '\n')
+    fw.write('conda activate ' + config['CONDAENV'] + '\n')
+    fw.write('source ' + config['CASAPATH'] + '\n')
     fw.write('\n')
 
 
@@ -394,6 +490,18 @@ def write_downloadtxt(args, fw, cat):
 def prepare_steps_ozstar(args, idx, config, sbid, oname, step='FIXDATA'):
     savename = os.path.join(args.paths['path_scripts'], f'slurm_{step}_beam{idx:02d}.sh')
     params = config['OZSTAR'][step]
+    params['job_name'] = step[:3] + f'-{idx:02d}' + f'-{sbid}'
+    params['output'] = os.path.join(args.paths['path_logs'], f'slurm_{step}_{oname}.output')
+    params['error'] = os.path.join(args.paths['path_logs'], f'slurm_{step}_{oname}.error')
+    params['usage'] = os.path.join(args.paths['path_logs'], f'slurm_{step}_{oname}.usage')
+    params['format'] = "JobID,JobName,Partition,NodeList,AllocCPUS,State,ExitCode,Elapsed,MaxRSS,MaxVMSize,CPUTime,TotalCPU,Start,End"
+    return params, savename
+
+def prepare_steps_mortimer(args, idx, config, sbid, oname, step='FIXDATA'):
+    '''Mortimer specific prepare steps'''
+    savename = os.path.join(args.paths['path_scripts'], f'slurm_{step}_beam{idx:02d}.sh')
+    params = config['MORTIMER'][step]
+    params['email'] = config['EMAIL']
     params['job_name'] = step[:3] + f'-{idx:02d}' + f'-{sbid}'
     params['output'] = os.path.join(args.paths['path_logs'], f'slurm_{step}_{oname}.output')
     params['error'] = os.path.join(args.paths['path_logs'], f'slurm_{step}_{oname}.error')
@@ -504,6 +612,28 @@ def write_casa_params(args, params, fw):
     fw.write('\n')
     fw.write('vis = sys.argv[-2]        # visibility path'  + '\n')
     fw.write('imagename = sys.argv[-1]  # recommend in format of SBxxx_beamxxx' + '\n')
+    fw.write('print("** NOTICE  ** path passed as arg:", vis, imagename)' + '\n')
+    fw.write('\n')
+    
+    txt = 'print('
+    for key, value in params.items():
+        if isinstance(value, str):
+            fw.write(key.lower() + ' = ' + f'"{value}"' + '\n' )
+        else:
+            fw.write(key.lower() + ' = ' + f'{value}' + '\n' )
+        txt += f'{key.lower()}, '
+
+    fw.write(txt + ')\n')
+    fw.write('\n')
+
+def write_casa_params_mortimer(args, params, fw):
+    fw.write('import os' + '\n')
+    fw.write('import sys' + '\n')
+    fw.write('import numpy as np' + '\n')
+    fw.write('\n')
+    fw.write('vis = sys.argv[-2]        # visibility path'  + '\n')
+    fw.write('imagename = sys.argv[-1]  # recommend in format of SBxxx_beamxxx' + '\n')
+    fw.write('selfcalimagename = imagename + "_selfcal"  # name of self-calibrated image' + '\n')
     fw.write('print("** NOTICE  ** path passed as arg:", vis, imagename)' + '\n')
     fw.write('\n')
     
