@@ -308,7 +308,7 @@ def format_mortimer(args, config, sbid, vis, cat):
                         write_run_casa_txt(args, fw, idx, filename, oname, config, mode='imaging', prefix='srun time ')
                     elif step == 'SELCAND':
                         write_moduleload_mortimer(fw, config)
-                        write_selcand_txt(args, fw, idx, oname, cat, prefix='srun time ')
+                        write_selcand_txt_mortimer(args, fw, idx, oname, cat, prefix='srun time ')
                         write_module_unload_ozstar(fw)
                     elif step == 'CLNDATA':
                         write_clndata_txt(args, fw, idx)
@@ -578,6 +578,21 @@ def write_run_casa_txt(args, fw, idx, filename, oname, config, mode='modeling', 
 def write_selcand_txt(args, fw, idx, oname, cat, prefix='', affix=''):
     path_script = 'select_candidates'
     path_deepimage = os.path.join(args.paths['path_models'], oname+'.image.tt0.fits') # deep image
+    path_catalogue = os.path.join(args.paths['path_data'], cat[0]['filename']) # selavy catalogue
+    path_images = args.paths['path_images']
+    path_cand = args.paths['path_cand']
+
+    text = f'{prefix}{path_script} --deepimage {path_deepimage} --catalogue {path_catalogue} '\
+        f'--folder {path_images} --beam beam{idx:02d} --outdir {path_cand} --name {oname} '\
+        f'--ignore-warning --config {args.config}{affix}'
+
+    fw.write("echo beam{:02d}: Select candidates...".format(idx) + '\n')
+    fw.write(text + '\n')
+    fw.write('\n')
+
+def write_selcand_txt_mortimer(args, fw, idx, oname, cat, prefix='', affix=''):
+    path_script = 'select_candidates'
+    path_deepimage = os.path.join(args.paths['path_models'], oname+'_selfcal.image.tt0.fits') # deep image
     path_catalogue = os.path.join(args.paths['path_data'], cat[0]['filename']) # selavy catalogue
     path_images = args.paths['path_images']
     path_cand = args.paths['path_cand']
