@@ -9,3 +9,4 @@ astroquery
 xmltodict
 python-casacore==3.5.1
 pandas
+pillow>=10.0.0
