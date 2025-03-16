@@ -92,10 +92,8 @@ def make_verbose(args):
 def extract_joblist(args, idx, ):
     fnames = args.databasic.files[idx]
     fnames = fnames[fnames['function'] == 'run']
-    print(fnames['step'])
     fnamelist = []
     for step in args.steps:
-        print(step)
         fname = fnames[fnames['step'] == step]['fname'][0]
         if not os.path.isfile(fname):
             logger.error('file %s does not exist', fname)
