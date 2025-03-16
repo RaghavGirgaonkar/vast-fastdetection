@@ -158,7 +158,14 @@ MORTIMER:
   MODELING:
     TIME: '50:00:00'
     NODES: 1
-    NTASKS: 1
+    NTASKS: 17
+    PARTITION: highmem
+    MEM: 16gb  # VAST 11GB max
+  MODELING_PARALLEL:
+    TIME: '50:00:00'
+    NODES: 1
+    NTASKS: 17
+    PARTITION: highmem
     MEM: 16gb  # VAST 11GB max 
   IMGFAST:
     TIME: '30:00:00'

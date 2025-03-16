@@ -14,7 +14,7 @@ class DataBasic:
 
         self.nbeam = 36
         self.steps = [
-            'GETDATA', 'UNTAR', 'FIXDATA', 'MODELING', 'IMGFAST', 'SELCAND', 'CLNDATA', 
+            'GETDATA', 'UNTAR', 'FIXDATA', 'MODELING', 'MODELING_PARALLEL', 'IMGFAST', 'SELCAND', 'CLNDATA', 
         ]
         self.function = [
             'run','output', 'error', 'usage', 
@@ -44,7 +44,7 @@ class DataBasic:
 
         dtype = [
             ('beam', np.int32), 
-            ('step', 'U10'), 
+            ('step', 'U20'), 
             ('function', 'U10'), 
             ('fname', 'U256')
         ]

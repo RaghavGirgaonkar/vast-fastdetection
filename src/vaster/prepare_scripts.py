@@ -32,7 +32,7 @@ import argparse
 import logging
 logger = logging.getLogger(__name__)
 
-__author__ = "Yuanming Wang <yuanmingwang@swin.edu.au>"
+__author__ = "Yuanming Wang <yuanmingwang@swin.edu.au>, Raghav Girgaonkar <raghav@uwm.edu>"
 
 
 def _main():
@@ -84,6 +84,7 @@ def _main():
             format_casa_modeling(args, config)
         elif config['MACHINE'] == 'mortimer':
             format_casa_modeling_mortimer(args, config)
+            format_casa_modeling_mortimer_parallel(args, config) #Create parallel imaging scripts
         format_casa_imgfast(args, config)
         prepare_downloads(args, sbid, cat, img, vis)
 
@@ -93,6 +94,7 @@ def _main():
             format_ozstar(args, config, sbid, vis, cat)
         elif config['MACHINE'] == 'mortimer':
             format_mortimer(args, config, sbid, vis, cat)
+            format_mortimer_parallel(args, config, sbid, vis) #Generate parallel modeling slurm scripts as well
 
         logger.info('SB%s preparation finish.', sbid)
 
@@ -317,6 +319,22 @@ def format_mortimer(args, config, sbid, vis, cat):
                 
             logger.info('Writing {}'.format(savename))
 
+def format_mortimer_parallel(args, config, sbid, vis):
+    ############################
+    # Generate parallel modeling scripts for one beam data on Mortimer
+    ############################
+    for idx in range(36):
+        oname = f'SB{sbid}_beam{idx:02d}'
+        step = 'MODELING'
+        filename = vis[idx]['filename']
+        params, savename = prepare_steps_mortimer_modeling_parallel(args, idx, config, sbid, oname, step)
+        with open(savename, 'w') as fw:
+            write_basetxt_mortimer_parallel(fw, sbid, savename, params)
+            write_moduleload_mortimer(fw, config)
+            write_run_casa_txt_parallel(args, fw, idx, filename, oname, config, mode='modeling')
+        
+        logger.info('Writing {}'.format(savename))
+
 
 
 def prepare_downloads(args, sbid, cat, img, vis):
@@ -371,7 +389,29 @@ def format_casa_modeling_mortimer(args, config):
             write_casa_calib(config['SELFCAL'], fw)
         
         #Clean again after phasecal application
-        write_casa_tclean(fw, imagename='selfcalimagename')
+        write_casa_tclean(fw, imagename='selfcalimagename', datacolumn="'corrected'")
+
+        write_casa_subtract_model(fw)
+        write_casa_exportfits(params, fw, imagename='selfcalimagename')
+
+def format_casa_modeling_mortimer_parallel(args, config):
+    # Parallel tclean modeling 
+    savename = os.path.join(args.paths['path_scripts'], 'casa_model_making_parallel.py')
+    params = get_modeling_params(config)
+    with open(savename, 'w') as fw:  
+        write_casa_params_mortimer_parallel(args, params, fw)
+        logger.info('Writing {}'.format(savename))
+
+        if config['RESETMODEL']:
+            write_casa_reset_vis(fw)
+
+        write_casa_tclean_parallel(fw)
+
+        if config['CAL']:
+            write_casa_calib(config['SELFCAL'], fw)
+        
+        #Clean again after phasecal application
+        write_casa_tclean_parallel(fw, imagename='selfcalimagename', datacolumn="'corrected'")
 
         write_casa_subtract_model(fw)
         write_casa_exportfits(params, fw, imagename='selfcalimagename')
@@ -434,6 +474,25 @@ def write_basetxt_mortimer(fw, sbid, savename, params):
     fw.write('#SBATCH --mail-type=all' + '\n')
     fw.write('#SBATCH --mail-user='+ str(params['email']) + '\n')
     fw.write('\n')
+
+def write_basetxt_mortimer_parallel(fw, sbid, savename, params):
+    logger.debug('write base txt ozstar for SB%s saving to %s', sbid, savename)
+    logger.debug(params)
+    fw.write("#!/bin/bash" + '\n')
+    fw.write('#\n')
+    #fw.write('#SBATCH --time=' + str(params['TIME'])  + '\n')
+    fw.write('#SBATCH --job-name=' + str(params['job_name']) + '\n')
+    fw.write('#SBATCH --nodes=' + str(params['NODES']) + '\n')
+    fw.write('#SBATCH --ntasks=' + str(params['NTASKS']) + '\n')
+    fw.write('#SBATCH --partition=' + str(params['PARTITION']) + '\n')
+    #fw.write('#SBATCH --mem-per-cpu=' + str(params['MEM']) + '\n')
+    fw.write('#SBATCH --output='+ str(params['output']) + '\n')
+    fw.write('#SBATCH --error='+ str(params['error']) + '\n')
+    fw.write('#SBATCH --export=all' + '\n')
+    fw.write('#SBATCH --mail-type=all' + '\n')
+    fw.write('#SBATCH --mail-user='+ str(params['email']) + '\n')
+    fw.write('\n')
+    fw.write('module load openmpi' + '\n')
 
 def write_endtxt_ozstar(fw, sbid, savename, params):
     logger.debug('write end txt ozstar for SB%s saving to %s', sbid, savename)
@@ -509,6 +568,18 @@ def prepare_steps_mortimer(args, idx, config, sbid, oname, step='FIXDATA'):
     params['format'] = "JobID,JobName,Partition,NodeList,AllocCPUS,State,ExitCode,Elapsed,MaxRSS,MaxVMSize,CPUTime,TotalCPU,Start,End"
     return params, savename
 
+def prepare_steps_mortimer_modeling_parallel(args, idx, config, sbid, oname, step='FIXDATA'):
+    '''Mortimer specific prepare steps'''
+    savename = os.path.join(args.paths['path_scripts'], f'slurm_{step}_PARALLEL_beam{idx:02d}.sh')
+    params = config['MORTIMER'][step]
+    params['email'] = config['EMAIL']
+    params['job_name'] = step[:3] + f'-{idx:02d}' + f'-{sbid}'
+    params['output'] = os.path.join(args.paths['path_logs'], f'slurm_{step}_{oname}.output')
+    params['error'] = os.path.join(args.paths['path_logs'], f'slurm_{step}_{oname}.error')
+    params['usage'] = os.path.join(args.paths['path_logs'], f'slurm_{step}_{oname}.usage')
+    params['format'] = "JobID,JobName,Partition,NodeList,AllocCPUS,State,ExitCode,Elapsed,MaxRSS,MaxVMSize,CPUTime,TotalCPU,Start,End"
+    return params, savename
+
 
 def write_download_vis_txt(args, fw, idx, filename, url):
     path_file = os.path.join(args.paths['path_data'], filename)
@@ -571,6 +642,30 @@ def write_run_casa_txt(args, fw, idx, filename, oname, config, mode='modeling', 
     path_log = os.path.join(args.paths['path_logs'], log_name)
     path_script = os.path.join(args.paths['path_scripts'], script_name)
     text = f'{prefix}{casa} --log2term --logfile {path_log} --nogui -c {path_script} {path_file} {oname}'
+    fw.write(text + '\n')
+    fw.write('\n')
+
+def write_run_casa_txt_parallel(args, fw, idx, filename, oname, config, mode='modeling', prefix=''):
+    filename = filename.replace('.tar', '.corrected')
+    path_file = os.path.join(args.paths['path_data'], filename)
+    casa = config['CASA']
+    ntasks = config['MORTIMER']['MODELING']['NTASKS'] #add ntasks to the casa command
+    logger.debug('write run casa txt %s output name %s', path_file, oname)
+
+    if mode == 'modeling':
+        script_name = 'casa_model_making_parallel.py'
+        log_name = f'casa_MODELING_{oname}.log'
+        fw.write(f"echo beam{idx:02d}: Create sky model and subtract..." + '\n')
+        fw.write('cd ' + args.paths['path_models'] + ' \n')
+    elif mode == 'imaging':
+        script_name = 'casa_short_imaging.py'
+        log_name = f'casa_IMGFAST_{oname}.log'
+        fw.write(f"echo beam{idx:02d}: Create model-subtracted short images..." + '\n')
+        fw.write('cd ' + args.paths['path_images'] + ' \n')
+
+    path_log = os.path.join(args.paths['path_logs'], log_name)
+    path_script = os.path.join(args.paths['path_scripts'], script_name)
+    text = f'mpicasa -n {ntasks} {prefix}{casa} --log2term --logfile {path_log} --nogui -c {path_script} {path_file} {oname}'
     fw.write(text + '\n')
     fw.write('\n')
 
@@ -663,6 +758,31 @@ def write_casa_params_mortimer(args, params, fw):
     fw.write(txt + ')\n')
     fw.write('\n')
 
+def write_casa_params_mortimer_parallel(args, params, fw):
+    fw.write('import os' + '\n')
+    fw.write('import sys' + '\n')
+    fw.write('import numpy as np' + '\n')
+    fw.write('\n')
+    fw.write('vis = sys.argv[-2]        # visibility path'  + '\n')
+    fw.write('imagename = sys.argv[-1]  # recommend in format of SBxxx_beamxxx' + '\n')
+    fw.write('selfcalimagename = imagename + "_selfcal"  # name of self-calibrated image' + '\n')
+    fw.write('print("** NOTICE  ** path passed as arg:", vis, imagename)' + '\n')
+    fw.write('\n')
+    
+    txt = 'print('
+    for key, value in params.items():
+        if isinstance(value, str):
+            fw.write(key.lower() + ' = ' + f'"{value}"' + '\n' )
+        else:
+            if key.lower() == 'facets':
+                fw.write(key.lower() + ' = ' + '1' + '\n' )
+                continue
+            fw.write(key.lower() + ' = ' + f'{value}' + '\n' )
+        txt += f'{key.lower()}, '
+
+    fw.write(txt + ')\n')
+    fw.write('\n')
+
 
 def write_casa_reset_vis(fw):
     txt = '''
@@ -682,9 +802,9 @@ print('Model-subtraction Finished', imagename)
 '''
     fw.write(txt)
 
-def write_casa_tclean(fw, imagename='imagename'):
+def write_casa_tclean(fw, imagename='imagename', datacolumn='datacolumn'):
     txt = f'''tclean(vis=vis, selectdata=True, field='', spw='', timerange=timerange, uvrange=uvrange, 
-antenna='', scan='', observation='', intent='', datacolumn=datacolumn, imagename={imagename}, 
+antenna='', scan='', observation='', intent='', datacolumn={datacolumn}, imagename={imagename}, 
 imsize=imsize, cell=cell, phasecenter='', stokes=stokes, projection='SIN', specmode='mfs', 
 reffreq='', nchan=-1, start='', width='', outframe='LSRK', veltype='radio', restfreq=[], 
 interpolation='linear', gridder=gridder, facets=facets, wprojplanes=wprojplanes, 
@@ -695,6 +815,23 @@ pbcor=pbcor, outlierfile='', weighting=weighting, robust=robust, npixels=0, uvta
 niter=niter, gain=gain, threshold=threshold, cycleniter=-1, cyclefactor=1.0, 
 minpsffraction=0.02, maxpsffraction=0.8, interactive=False, usemask='user', mask='',
 pbmask=0.0, savemodel=savemodel, startmodel='', parallel=False)
+
+'''
+    fw.write(txt)
+
+def write_casa_tclean_parallel(fw, imagename='imagename', datacolumn='datacolumn'):
+    txt = f'''tclean(vis=vis, selectdata=True, field='', spw='', timerange=timerange, uvrange=uvrange, 
+antenna='', scan='', observation='', intent='', datacolumn={datacolumn}, imagename={imagename}, 
+imsize=imsize, cell=cell, phasecenter='', stokes=stokes, projection='SIN', specmode='mfs', 
+reffreq='', nchan=-1, start='', width='', outframe='LSRK', veltype='radio', restfreq=[], 
+interpolation='linear', gridder=gridder, facets=facets, wprojplanes=wprojplanes, 
+vptable='', aterm=True, psterm=False, wbawp=True, conjbeams=False, cfcache='', 
+computepastep=360.0, pblimit=pblimit, normtype='flatnoise', deconvolver=deconvolver,
+scales=scales, nterms=nterm, smallscalebias=0.0, restoration=True, restoringbeam=[],
+pbcor=pbcor, outlierfile='', weighting=weighting, robust=robust, npixels=0, uvtaper=[],
+niter=niter, gain=gain, threshold=threshold, cycleniter=-1, cyclefactor=1.0, 
+minpsffraction=0.02, maxpsffraction=0.8, interactive=False, usemask='user', mask='',
+pbmask=0.0, savemodel=savemodel, startmodel='', parallel=True)
 
 '''
     fw.write(txt)

@@ -32,8 +32,9 @@ def _main():
     parser.add_argument('-b', '--beams', type=int, nargs='+', default=None, 
                         help='input beams for processing, number only, leave it blank for all of beams')
     parser.add_argument('--dir', type=str, default='.', help='where those SBIDs folders are stored')
+    parser.add_argument('--npar', type=int, default=1, help='Number of tasks for parallel modeling (default: 1)')
     parser.add_argument('--steps', type=str, nargs='+', default=['FIXDATA', 'MODELING', 'IMGFAST', 'SELCAND', 'CLNDATA'], 
-                        help='tasks to process, following the order')
+                        help='tasks to process, following the order, use MODELING_PARALLEL instead of MODELING for parallel modeling')
     parser.add_argument('--clean', action='store_true', help='Delete any relevant files before re-submit')
     parser.add_argument('--dry-run', action='store_true', help='perform a dry run')
     parser.add_argument('-v', '--verbose', action='store_true',
@@ -46,6 +47,7 @@ def _main():
 
     for i, sbid in enumerate(args.sbids):
         logger.info("Processing observation SB%s (%s/%s)", sbid, i+1, len(args.sbids))
+        # npar = args.npar
         databasic = DataBasic(sbid, args.dir)
         args.databasic = databasic 
         args.paths = databasic.paths
@@ -66,7 +68,7 @@ def _main():
                 logger.warning(f'Dry run: SB{sbid} beam{idx:02d}: will submit below scripts in order')
                 logger.warning(fnamelist)
             else:
-                job_id_list = submit_joblist(fnamelist)
+                job_id_list = submit_joblist(fnamelist,args)
                 write_scancel_scripts(args, idx, job_id_list)
 
     end_time = time.time()
@@ -90,9 +92,10 @@ def make_verbose(args):
 def extract_joblist(args, idx, ):
     fnames = args.databasic.files[idx]
     fnames = fnames[fnames['function'] == 'run']
-
+    print(fnames['step'])
     fnamelist = []
     for step in args.steps:
+        print(step)
         fname = fnames[fnames['step'] == step]['fname'][0]
         if not os.path.isfile(fname):
             logger.error('file %s does not exist', fname)
@@ -128,13 +131,13 @@ def clean_data(args, sbid, affix, command):
         
 
 
-def submit_joblist(fnamelist):
+def submit_joblist(fnamelist,args):
     job_id_list = []
     for i, fname in enumerate(fnamelist):
         if i == 0:
-            job_id = submit_onejob(fname)
+            job_id = submit_onejob(fname,args)
         else:
-            job_id = submit_onejob(fname, dependency=True, dep_job_id=pre_job_id)
+            job_id = submit_onejob(fname, args, dependency=True, dep_job_id=pre_job_id)
 
         if job_id is None:
             break 
@@ -147,11 +150,17 @@ def submit_joblist(fnamelist):
 
 
 
-def submit_onejob(fname, dependency=False, dep_job_id=None):
+def submit_onejob(fname, args, dependency=False, dep_job_id=None):
     if dependency:
-        cmd = ['sbatch', '-d', f'afterok:{dep_job_id}', fname]
+        if "PARALLEL" in fname:
+            cmd = ['sbatch', '-n', f'{args.npar}', '-d', f'afterok:{dep_job_id}', fname]
+        else:
+            cmd = ['sbatch', '-d', f'afterok:{dep_job_id}', fname]
     else:
-        cmd = ['sbatch', fname]
+        if "PARALLEL" in fname:
+            cmd = ['sbatch', '-n', f'{args.npar}', fname]
+        else:
+            cmd = ['sbatch', fname]
 
     logger.info('Exectuing "%s"', cmd)
     job = subprocess.run(cmd, capture_output=True, text=True)
