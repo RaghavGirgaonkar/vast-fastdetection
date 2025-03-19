@@ -48,7 +48,15 @@ conda activate vaster
 git clone https://github.com/askap-vast/vast-fastdetection/tree/main
 ```
 
-6. We now have to install the required libraries for VASTER, for ease, comment out aplpy in the requirements.txt file as run 
+6. We now have to install the required libraries and the VASTER pipeline, this can be installed via 
+```
+pip install .
+```
+An editable version (for development) can be installed as follows,
+```
+pip install -e .
+``` 
+7. In case of dependency issues for `aplpy`, first comment out aplpy (by adding a `#` as prefix) in the `requirements.txt` file and run 
 ```
 pip install -r requirements
 ```
@@ -58,11 +66,11 @@ conda install -c conda-forge aplpy
 ```
 This takes care of all dependency issues that may arise.
 
-7. With all the required libraries installed, VASTER can then be installed via pip
+The VASTER pipeline can then be installed by
 ```
 pip install .
 ```
-An editable version (for development) can be installed as follows,
+or an editable version
 ```
 pip install -e .
 ```
@@ -71,6 +79,8 @@ pip install -e .
 ```
 prepare_scripts -h
 ```
+This should show a help message for the `prepare_scripts` utility.
+
 ## Package Requirements
 
 * python                             >=3.9
@@ -192,7 +202,7 @@ submit_slurm_jobs <sbid> -b 0 1 2 --steps FIXDATA MODELING IMGFAST
 ```
 This will only submit jobs for the first 3 steps of the pipeline. 
 
-4. VASTER has 5 main steps: FIXDATA MODELING IMGFAST SELCAND and CLNDATA, 
+4. VASTER has 5 main steps: FIXDATA MODELING IMGFAST SELCAND and CLNDATA, **these steps have to be run in this particular order.** 
 each step can be run individually for any beam as follows:
 
 **Rescale and fix the data**
@@ -252,8 +262,12 @@ casa --log2term --logfile /path/to/SBXXXXX/logfiles/casa_IMGFAST_SBXXXXX_beamXX.
 ```
 select_candidates --deepimage /path/to/SBXXXXX/models/SBXXXX_beamXX.image.tt0.fits --catalogue /path/to/SBXXXXX/data/selavy-image.i.<filename>.SBXXXXX.cont.taylor.0.restored.conv.components.xml --folder /path/to/SBXXXXX/images --beam beamXX --outdir /path/to/SBXXXXX/candidates --name SBXXXX_beamXX --ignore-warning --config /path/to/config.yml
 ```
+3. The above steps can be run manually or one can use the `bash_PROCESSING_beamXX.sh` script that is created (after `prepare_scripts`) to run them sequentially as follows:
+```
+bash bash_PROCESSING_beamXX.sh
+```
 
-## Parameter customisation
+## Parameter customisation (OUTDATED)
 **Short timescale imaging setting**
 
 10-second images are generated using the task `tclean` from CASA. Paramters can be adjusted in `/vast-fastdetection/imaging/short_imaging.py` to accommodate for the scientific goal. Relevant parameters may include:
