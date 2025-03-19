@@ -9,7 +9,7 @@ Some flowcharts can also be found in [this Google slides](https://docs.google.co
 
 Example outputs: [SB11676](https://unisydneyedu-my.sharepoint.com/:f:/g/personal/ywan3191_uni_sydney_edu_au/Em-RqhrRKdBGmnvJzd1CU4UBZyFnSh4E6jvBzu9icCux2g?e=e6FAow)
 
-*(The making of a PDF containing detailed installation and running instructions with updated documentaton is in progress)*
+**(The making of a PDF containing detailed installation and running instructions with updated documentaton is in progress)**
 
 ## Installation
 
@@ -18,11 +18,11 @@ Example outputs: [SB11676](https://unisydneyedu-my.sharepoint.com/:f:/g/personal
 1. To install VASTER, it is recommanded to install it in a virtual environment (such as with conda or miniconda) with python==3.9. Download and install miniconda from here 
 [miniconda]({https://docs.anaconda.com/miniconda/install/) 
 
-2. For ease of adding conda and casa to your current path variable, create two scripts: $\texttt{.activate\_conda}$ and $\texttt{.activate\_casa}$. In $\texttt{.activate\_conda}$ add the line:
+2. For ease of adding conda and casa to your current path variable, create two scripts: `.activate_conda` and `.activate_casa`. In `.activate_conda` add the line:
 ```
 eval "$(/path/to/miniconda3/bin/conda shell.bash hook)"
 ```
-and in $\texttt{.activate\_casa}$ add the line:
+and in `.activate_casa` add the line:
 ```
 export PATH="/path/to/casa/bin:$PATH"
 ```
@@ -123,7 +123,7 @@ ssh -XY <username>@ozstar.swin.edu.au
 2. Once account is created, you would need to join (with approval) a project in order to get access to and analyze data. Each project has a project code (such as oz330).
 A request to join project can be sent here [Account Management System](https://supercomputing.swin.edu.au/account-management/).
 
-3. You would also need an OPAL account, which can be created here [OPAL account creation](https://opal.atnf.csiro.au/register). *Note: This is a required step to run VASTER on any machine.*
+3. You would also need an OPAL account, which can be created here [OPAL account creation](https://opal.atnf.csiro.au/register). **Note: This is a required step to run VASTER on any machine.**
 
 ### Preparing Scripts 
 
@@ -133,7 +133,7 @@ A request to join project can be sent here [Account Management System](https://s
 mkdir -p SB50210
 ```
 
-2. Copy a sample $\texttt{config.yml}$ file from [config file](https://github.com/askap-vast/vast-fastdetection/blob/main/prepare/config.yml) into your directory. (Not in SBXXXX/). Update any parameters in this file (such as the machine, inaging parameters etc).
+2. Copy a sample `config.yml` file from [config file](https://github.com/askap-vast/vast-fastdetection/blob/main/prepare/config.yml) into your directory. (Not in SBXXXX/). Update any parameters in this file (such as the machine, inaging parameters etc).
 
 3. We can now prepare the scripts as follows. If the config file is already in your directory, 
 ```
@@ -147,6 +147,7 @@ For a complete list of parameters available for this steps, one can run
 ```
 prepare_scripts -h
 ```
+In runtime, this script may ask you for your OPAL username and password. To bypass this for every time you run this script for different fields, you can set the environment variables `$OPAL_USER` and `$OPAL_PWD` as your username and password respectively. This option is also available in the `config.yml` file.
 
 4. This will create a new folder named "SBxxxx" under current directory. 
 Within the new folder, it will generate the following sub directories
@@ -158,10 +159,10 @@ Within the new folder, it will generate the following sub directories
 * logfiles/ (to store logfiles)
 The created scripts for analysis can be found in the SBXXXX/scripts directory.
 
-5. Note: Certain slurm-based clusters may not have the $\texttt{sacct}$ utility running or available to monitor jobs. In such cases, the corresponding line in the slurm scripts should be commented out.
+5. Note: Certain slurm-based clusters may not have the `sacct` utility running or available to monitor jobs. In such cases, the corresponding line in the slurm scripts should be commented out.
 
 ### Downloading Visibility Data
-To download visibility data, we will use the $\texttt{prepare\_data}$ utility.
+To download visibility data, we will use the `prepare_data` utility.
 1. To get help on various parameters of this utility run, 
 ```
 prepare_data -h
@@ -173,7 +174,7 @@ prepare_data <sbid> -b 0 1 2 --untar
 this will download beam00, beam 01 and beam02 visibility data in the SBXXXX/data/ folder and untar it.
 
 ### Running Scripts
-Once your data is downloaded the $\texttt{submit\_slurm\_jobs}$ utility can be used to submit multiple slurm jobs corresponding to the different steps of VASTER at once. 
+Once your data is downloaded the `submit_slurm_jobs` utility can be used to submit multiple slurm jobs corresponding to the different steps of VASTER at once. 
 1. Help on this utility can be accessed through:
 ```
 submit_slurm_jobs -h
@@ -231,6 +232,7 @@ When running VASTER on personal machines and not slurm-based supercomputing syst
 
 1. Before creating scripts (see Running Scripts section), change ```machine=bash``` in config file. 
 2. Once required data is retrieved (see Downloading Visibility Data section), the different steps of VASTER can be run as follows:
+
 **Rescale and fix the data**
 ```
 askapsoft_rescale /path/to/SBXXXXX/data/<filename>.beamXX_averaged_cal.leakage.ms /path/to/SBXXXXX/data/<filename>.beam00_averaged_cal.leakage.ms.corrected
