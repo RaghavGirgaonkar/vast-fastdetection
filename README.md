@@ -1,6 +1,6 @@
 # VASTER - ASKAP Intra-Observation Transient Search Pipeline
 
-VASTER is a noval pipeline designed for the efficient detection and characterization of intra-observation transients in data from the Australian Square Kilometre Array Pathfinder (ASKAP) telescope. 
+VASTER is a novel pipeline designed for the efficient detection and characterization of intra-observation transients in data from the Australian Square Kilometre Array Pathfinder (ASKAP) telescope. 
 This pipeline streamlines the entire process, from data retrieval to candidate selection, providing valuable insights into transient astrophysical phenomena.
 
 See details in the paper [Wang Y. et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023MNRAS.523.5661W/abstract)
@@ -9,20 +9,82 @@ Some flowcharts can also be found in [this Google slides](https://docs.google.co
 
 Example outputs: [SB11676](https://unisydneyedu-my.sharepoint.com/:f:/g/personal/ywan3191_uni_sydney_edu_au/Em-RqhrRKdBGmnvJzd1CU4UBZyFnSh4E6jvBzu9icCux2g?e=e6FAow)
 
-## Install
+*(The making of a PDF containing detailed installation and running instructions with updated documentaton is in progress)*
 
-Recommand to install in a virtual environment with python==3.9
+## Installation
 
-Download or git clone this repo, and then install via pip
+### Recommended General Installation Instructions (Applicable to Clusters or Personal Machines)
+
+1. To install VASTER, it is recommanded to install it in a virtual environment (such as with conda or miniconda) with python==3.9. Download and install miniconda from here 
+[miniconda]({https://docs.anaconda.com/miniconda/install/) 
+
+2. For ease of adding conda and casa to your current path variable, create two scripts: $\texttt{.activate\_conda}$ and $\texttt{.activate\_casa}$. In $\texttt{.activate\_conda}$ add the line:
+```
+eval "$(/path/to/miniconda3/bin/conda shell.bash hook)"
+```
+and in $\texttt{.activate\_casa}$ add the line:
+```
+export PATH="/path/to/casa/bin:$PATH"
+```
+
+3. These two scripts can then be used to activate conda and casa for running slurm jobs by adding the lines,
+```
+source /path/to/.activate_conda
+source /path/to/.activate_casa
+```
+to the slurm batch file or to activate conda or casa in general in your terminal session.
+
+4. Once conda and casa are activated, create a vaster conda environment with python 3.9 as follows (the name of the environment can be different),
+```
+conda create --name vaster python=3.9
+```
+and activate it,
+```
+conda activate vaster
+```
+
+5. Download or git clone this repo, 
+```
+git clone https://github.com/askap-vast/vast-fastdetection/tree/main
+```
+
+6. We now have to install the required libraries for VASTER, for ease, comment out aplpy in the requirements.txt file as run 
+```
+pip install -r requirements
+```
+once the rest of the libraries have been installed, install aplpy using conda-forge as follows,
+```
+conda install -c conda-forge aplpy
+```
+This takes care of all dependency issues that may arise.
+
+7. With all the required libraries installed, VASTER can then be installed via pip
 ```
 pip install .
 ```
-
-Install an editable version (for development)
-
+An editable version (for development) can be installed as follows,
 ```
 pip install -e .
 ```
+
+8. Test the installation by running 
+```
+prepare_scripts -h
+```
+## Package Requirements
+
+* python                             >=3.9
+* numpy                              >=1.23.1
+* scipy                              
+* astropy                            >=5.3.3  
+* aplpy                              
+* matplotlib                         <3.6
+* scikit-image                          
+* astroquery
+* xmltodict                          https://github.com/conda-forge/xmltodict-feedstock
+* python-casacore 
+* pandas
+* pillow                             >=10.0.0
 
 ## Features
 
@@ -46,147 +108,111 @@ For each transient candidate, VASTER generates the following outputs:
 * model image cutouts (png)
 * animations created from model-subtracted snapshot images (gif)
 
-## Installation
 
+## Step-by-Step instructions (Cluster)
+Instructions for running VASTER in a slurm supercomputer system - tested on OzStar and UWM's Mortimer clusters.
+
+### Prerequisites (OzStar)
+
+1. To create an account on OzStar refer to [New Account Creation](https://supercomputing.swin.edu.au/account-management/new_account_request). 
+One can then login by:
 ```
-git clone git@github.com:askap-vast/vast-fastdetection.git
-```
-
-### Package Requirements
-
-* python                             >=3.9
-* numpy                              >=1.23.1
-* scipy                              
-* astropy                            >=5.3.3  
-* aplpy                              
-* matplotlib                         <3.6
-* scikit-image                          
-* astroquery
-* xmltodict                          https://github.com/conda-forge/xmltodict-feedstock
-* python-casacore 
-
-## Quick Usage
-
-Running in slurm supercomputer system - only tested for Shanghai SKA regional prototype
-```
-bash run_everything.sh <sbid>
-```
-It will then automatically download data from CASDA and then submit a bunch of sbatch jobs 
-
-Rnning in bash
-```
-bash run_everything_for_bash.sh <sbid>
+ssh -XY <username>@ozstar.swin.edu.au
 ```
 
-It will create a new folder named "SBxxxx" under current directory. 
+2. Once account is created, you would need to join (with approval) a project in order to get access to and analyze data. Each project has a project code (such as oz330).
+A request to join project can be sent here [Account Management System](https://supercomputing.swin.edu.au/account-management/).
+
+3. You would also need an OPAL account, which can be created here [OPAL account creation](https://opal.atnf.csiro.au/register). *Note: This is a required step to run VASTER on any machine.*
+
+### Preparing Scripts 
+
+1. (Optional) In your personal directory, create an empty folder named after the SBID(s) you want to analyze. For eg: 
+
+```
+mkdir -p SB50210
+```
+
+2. Copy a sample $\texttt{config.yml}$ file from [config file](https://github.com/askap-vast/vast-fastdetection/blob/main/prepare/config.yml) into your directory. (Not in SBXXXX/). Update any parameters in this file (such as the machine, inaging parameters etc).
+
+3. We can now prepare the scripts as follows. If the config file is already in your directory, 
+```
+prepare_scripts <sbid>
+```
+else
+```
+prepare_scripts <sbid> --config /path/to/config.yml
+```
+For a complete list of parameters available for this steps, one can run
+```
+prepare_scripts -h
+```
+
+4. This will create a new folder named "SBxxxx" under current directory. 
 Within the new folder, it will generate the following sub directories
 * data/ (to store visibilities)
 * models/ (to store time-averaged model images)
 * images/ (to store model-subtracted short images)
 * candidates/ (to store final candidates including csv and png)
-* fitsfiles/ (intermeidate folder)
 * scripts/ (to store scripts that will be used)
 * logfiles/ (to store logfiles)
+The created scripts for analysis can be found in the SBXXXX/scripts directory.
 
+5. Note: Certain slurm-based clusters may not have the $\texttt{sacct}$ utility running or available to monitor jobs. In such cases, the corresponding line in the slurm scripts should be commented out.
 
-## Step-by-step insturction (bash shell)
+### Downloading Visibility Data
+To download visibility data, we will use the $\texttt{prepare\_data}$ utility.
+1. To get help on various parameters of this utility run, 
+```
+prepare_data -h
+```
+2. By default all 36 beams of the SBID will be downloaded, but one can specify specific beams by:
+```
+prepare_data <sbid> -b 0 1 2 --untar
+```
+this will download beam00, beam 01 and beam02 visibility data in the SBXXXX/data/ folder and untar it.
 
-1. prepare data structure 
+### Running Scripts
+Once your data is downloaded the $\texttt{submit\_slurm\_jobs}$ utility can be used to submit multiple slurm jobs corresponding to the different steps of VASTER at once. 
+1. Help on this utility can be accessed through:
 ```
-python tools/get_everything_ready_for_bash.py <sbid number> <path to save results>
-```
-It will create data structure under defined path, with sub directories mentioned above. 
+submit_slurm_jobs -h
+``` 
 
+2. To slurm scripts for all steps run
+```
+submit_slurm_jobs <sbid> -b 0 1 2 
+```
+This will submit jobs for beams 0, 1 and 2.
 
-2. download visibilities
+3. To submit certain steps of the job,
 ```
-bash <path>/scripts/download_selavy.sh
-bash <path>/scripts/bash_CHECKDATA.sh 
+submit_slurm_jobs <sbid> -b 0 1 2 --steps FIXDATA MODELING IMGFAST
 ```
+This will only submit jobs for the first 3 steps of the pipeline. 
 
-**All of the following steps are stored in <path>/scripts/bash_PROCESSING_beam??.sh**, i.e.
-```
-bash <path>/scripts/bash_PROCESSING_beam??.sh
-```
-Read the following if you want to do it manually. 
-
-3. untar visibilities
-```
-tar xvf <path>/data/scienceData.....tar
-```
-
-4. fix askap soft flux scale and beam positions
-```
-python tools/askapsoft_rescale.py <input visibilities> <output visibilities name>
-python tools/fix_dir.py <visibilities name>
-```
-
-5. create sky model and subtract
-```
-casa --logfile <path>/logfiles/<name of logfile> -c imaging/model_making.py <input visibilities> <output name>
-```
-
-6. create model-subtracted short images
-```
-casa --logfile <path>/logfiles/<name of logfile> -c imaging/short_imaging.py <input visibilities> <output name>
-```
-
-7. candidates selection
-```python
-python select_candidates.py <time-averaged model image> <deep_source_selavy_catalog> <folder_short_fits_images> <beam_number> <output folder> <output_name>
-```
-
-
-## Step-by-step instruction (cluster)
-This instruction assumes the pipeline runs on a computer cluster, so commands like `sbatch <script name>` are used. If it is run on a local machine, copy the line inside the script and run it with python.
-
-**Prepare the scripts for the pipeline**
-
-If running the pipeline on a cluster, adjust the runtime of `MODELING`, `IMGFAST`, and `SELCAND` as appropriate.
-```python
-python /your/folder/to/pipeline/tools/get_everything_ready.py <SBID> <output_folder>
-```
-
-**Download the visibility data**
-Download the data one by one for 36 beams.
-```bash
-bash /your/output/folder/scripts/bash_GETDATA_beamXX.sh
-```
-Download selavy components and mosaiced fits images.
-```bash
-bash /your/output/folder/scripts/download_selavy.sh
-bash /your/output/folder/scripts/download_mosaic_images.sh
-```
-
-**Untar the data**
-```bash
-cd /your/output/folder/data
-tar xvf scienceData.XXX.YYY.ZZZ.beamXX_averaged_cal_leakage.ms.tar
-```
-Repeat this step for all 36 beams.
-
-A folder of the same name without the tar extension can be seen in the data folder after the process completes.
+4. VASTER has 5 main steps: FIXDATA MODELING IMGFAST SELCAND and CLNDATA, 
+each step can be run individually for any beam as follows:
 
 **Rescale and fix the data**
-```bash
+```
 sbatch /your/output/folder/scripts/slurm_FIXDATA_beamXX.sh
 ```
-
-**Deep modelling**
-```bash
+**Deep Modeling**
+```
 sbatch /your/output/folder/scripts/slurm_MODELING_beamXX.sh
 ```
 A .fits image in the form of `SBID_beamXX.image.tt0.fits` should appear in the models folder.
 
-**Short timescale imaging**
-```bash
+**Short Timescale Imaging**
+```
 sbatch /your/output/folder/scripts/slurm_IMGFAST_beamXX.sh
 ```
 Short images will be saved in the images folder.
 You can check the progress in the `.output` file from the logfiles folder if running on a cluster.
 
-**Candidate selection**
-```bash
+**Candidate Selection**
+```
 sbatch /your/output/folder/scripts/slurm_SELCAND_beamXX.sh
 ```
 Chi-square and peak fits images of each beam will be saved in the candidates folder. Lightcurve, deep image and snapshot animation of the candidates (if any) are also saved.
@@ -200,8 +226,33 @@ Change the `base_folder` to the pathname of the candidates folder.
 
 A `SBID.csv` file will be produced at the end.
 
-## Paramter customisation
-**Short timescle imaging setting**
+## Step-by-step instructions: (Personal Machines)
+When running VASTER on personal machines and not slurm-based supercomputing systems the following steps can be followed:
+
+1. Before creating scripts (see Running Scripts section), change ```machine=bash``` in config file. 
+2. Once required data is retrieved (see Downloading Visibility Data section), the different steps of VASTER can be run as follows:
+**Rescale and fix the data**
+```
+askapsoft_rescale /path/to/SBXXXXX/data/<filename>.beamXX_averaged_cal.leakage.ms /path/to/SBXXXXX/data/<filename>.beam00_averaged_cal.leakage.ms.corrected
+fix_dir /path/to/SBXXXXX/data/<filename>.beam00_averaged_cal.leakage.ms.corrected
+```
+**Deep Modeling**
+```
+cd /path/to/SBXXXXX/models
+casa --log2term --logfile /path/to/SBXXXXX/logfiles/casa_MODELING_SBXXXXX_beamXX.log --nogui -c /path/to/SBXXXXX/scripts/casa_model_making.py /path/to/SBXXXXX/data/<filename>.beamXX_averaged_cal.leakage.ms.corrected SBXXXXX_beamXX
+```
+**Short Timescale Imaging**
+```
+cd /path/to/SBXXXXX/images
+casa --log2term --logfile /path/to/SBXXXXX/logfiles/casa_IMGFAST_SBXXXXX_beamXX.log --nogui -c /path/to/SBXXXXX/scripts/casa_short_imaging.py /path/to/SBXXXXX/data/<filename>.beamXX_averaged_cal.leakage.ms.corrected SBXXXXX_beamXX
+```
+**Candidate Selection**
+```
+select_candidates --deepimage /path/to/SBXXXXX/models/SBXXXX_beamXX.image.tt0.fits --catalogue /path/to/SBXXXXX/data/selavy-image.i.<filename>.SBXXXXX.cont.taylor.0.restored.conv.components.xml --folder /path/to/SBXXXXX/images --beam beamXX --outdir /path/to/SBXXXXX/candidates --name SBXXXX_beamXX --ignore-warning --config /path/to/config.yml
+```
+
+## Parameter customisation
+**Short timescale imaging setting**
 
 10-second images are generated using the task `tclean` from CASA. Paramters can be adjusted in `/vast-fastdetection/imaging/short_imaging.py` to accommodate for the scientific goal. Relevant parameters may include:
 
@@ -253,7 +304,7 @@ Remove images with rms larger than two times median RMS level.
 cube.remove_bad_images()
 ```
 
-**generate a cube**
+**Generate a Cube**
 
 The default way in `run_cube.py` is to form a cube directly 
 
