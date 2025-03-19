@@ -16,7 +16,7 @@ Example outputs: [SB11676](https://unisydneyedu-my.sharepoint.com/:f:/g/personal
 ### Recommended General Installation Instructions (Applicable to Clusters or Personal Machines)
 
 1. To install VASTER, it is recommanded to install it in a virtual environment (such as with conda or miniconda) with python==3.9. Download and install miniconda from here 
-[miniconda]({https://docs.anaconda.com/miniconda/install/) 
+[miniconda](https://docs.anaconda.com/miniconda/install/) 
 
 2. For ease of adding conda and casa to your current path variable, create two scripts: `.activate_conda` and `.activate_casa`. In `.activate_conda` add the line:
 ```
