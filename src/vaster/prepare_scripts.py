@@ -310,6 +310,7 @@ def format_mortimer(args, config, sbid, vis, cat):
                                 write_imager_txt_mortimer(args, fw, idx, filename, oname, config, mode='modeling', prefix='', selfcal=True)
                         else:
                             # write_singularity_load_mortimer(fw, config)
+                            write_moduleload_mortimer(fw, config)
                             write_imager_txt_mortimer(args, fw, idx, filename, oname, config, mode='modeling', prefix='', selfcal=False)
                             if config['PHASESELFCAL']:
                                 write_casa_selfcal_cmd(args, fw, idx, filename, oname)
@@ -450,10 +451,15 @@ def write_endtxt_ozstar(fw, sbid, savename, params):
     fw.write('\n')
 
 def write_moduleload_mortimer(fw, config):
-    fw.write('source ' + config['CONDA'] + '\n')
-    fw.write('conda activate ' + config['CONDAENV'] + '\n')
-    fw.write('source ' + config['CASAPATH'] + '\n')
-    fw.write('\n')
+    if config['VASTER_SINGULARITY'] == False:
+        fw.write('source ' + config['CONDA'] + '\n')
+        fw.write('conda activate ' + config['CONDAENV'] + '\n')
+        fw.write('source ' + config['CASAPATH'] + '\n')
+        fw.write('\n')
+    else:
+        fw.write('source ' + config['CASAPATH'] + '\n')
+        fw.write('\n')
+
 
 
 def write_virtual_env_enable(fw, config):
