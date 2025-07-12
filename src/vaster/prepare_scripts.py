@@ -78,7 +78,7 @@ def _main():
         #Check all entries in vis that have the string leakage in the filename
         leakage_mask = ['leakage' in fname for fname in vis['filename']]
         vis_filtered = vis[leakage_mask]
-        print('Filenames with leakage:', vis_filtered['filename'])
+        print('Filenames with "leakage":', vis_filtered['filename'])
         if len(vis_filtered) > 0:
             vis_final = vis_filtered
         else:
@@ -295,23 +295,38 @@ def format_mortimer(args, config, sbid, vis, cat):
                 with open(savename, 'w') as fw:
                     write_basetxt_mortimer(fw, sbid, savename, params)
                     if step == 'FIXDATA':
-                        write_moduleload_mortimer(fw, config)
-                        write_fixdata_txt_mortimer(args, fw, idx, filename, config, prefix='')
+                        if config['VASTER_SINGULARITY'] == False:
+                            write_moduleload_mortimer(fw, config)
+                            write_fixdata_txt_mortimer(args, fw, idx, filename, config, prefix='')
+                        else:
+                            write_singularity_load_mortimer(fw, config)
+                            write_fixdata_txt_mortimer(args, fw, idx, filename, config, prefix='singularity exec ' + config['VASTER_PATH'] + ' ')
                     elif step == 'MODELING':
-                        write_moduleload_mortimer(fw, config)
-                        write_imager_txt_mortimer(args, fw, idx, filename, oname, config, mode='modeling', prefix='', selfcal=False)
-                        if config['PHASESELFCAL']:
-                            write_casa_selfcal_cmd(args, fw, idx, filename, oname)
-                            write_imager_txt_mortimer(args, fw, idx, filename, oname, config, mode='modeling', prefix='', selfcal=True)
+                        if config['VASTER_SINGULARITY'] == False:
+                            write_moduleload_mortimer(fw, config)
+                            write_imager_txt_mortimer(args, fw, idx, filename, oname, config, mode='modeling', prefix='', selfcal=False)
+                            if config['PHASESELFCAL']:
+                                write_casa_selfcal_cmd(args, fw, idx, filename, oname)
+                                write_imager_txt_mortimer(args, fw, idx, filename, oname, config, mode='modeling', prefix='', selfcal=True)
+                        else:
+                            # write_singularity_load_mortimer(fw, config)
+                            write_imager_txt_mortimer(args, fw, idx, filename, oname, config, mode='modeling', prefix='', selfcal=False)
+                            if config['PHASESELFCAL']:
+                                write_casa_selfcal_cmd(args, fw, idx, filename, oname)
+                                write_imager_txt_mortimer(args, fw, idx, filename, oname, config, mode='modeling', prefix='', selfcal=True)
                     elif step == 'IMGFAST':
-                        write_moduleload_mortimer(fw, config)
+                        # write_moduleload_mortimer(fw, config)
                         if config['PHASESELFCAL']:
                             write_imager_txt_mortimer(args, fw, idx, filename, oname, config, mode='imaging', prefix='', selfcal=True)
                         else:
                             write_imager_txt_mortimer(args, fw, idx, filename, oname, config, mode='imaging', prefix='', selfcal=False)
                     elif step == 'SELCAND':
-                        write_moduleload_mortimer(fw, config)
-                        write_selcand_txt_mortimer(args, fw, idx, oname, config, cat, prefix='')
+                        if config['VASTER_SINGULARITY'] == False:
+                            write_moduleload_mortimer(fw, config)
+                            write_selcand_txt_mortimer(args, fw, idx, oname, config, cat, prefix='')
+                        else:
+                            write_singularity_load_mortimer(fw, config)
+                            write_selcand_txt_mortimer(args, fw, idx, oname, config, cat, prefix='singularity exec ' + config['VASTER_PATH'] + ' ')
                     elif step == 'CLNDATA':
                         write_clndata_txt(args, fw, idx, config)
                         
