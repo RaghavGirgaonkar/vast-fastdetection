@@ -17,9 +17,11 @@ VIRTUAL_ENV_ENABLE: [
   ]
 VIRTUAL_ENV_DISABLE: 'conda deactivate'
 
-SINGULARITY: True
+SINGULARITY: True #Use singularity container or not for wsclean
+VASTER_SINGULARITY: True #Use singularity container or not for vaster
 SINGULARITY_BINDPATH: '/raid-15/LS/kaplan/raghav/VAST_TEST/SB50230'
 WSCLEAN_PATH: /raid-15/LS/kaplan/raghav/software/wsclean.sif # container path for wsclean; only useful when IMAGER is wsclean
+VASTER_PATH: /raid-15/LS/kaplan/raghav/software/vaster_singularity.sif # container path for vaster; only useful when SINGULARITY is True
 #########################################################################
 
 
@@ -185,6 +187,7 @@ MORTIMER:
     TIME: '1:00:00'
     NODES: 1
     NTASKS: 1
+    PARTITION: highmem
     MEM: 4gb  # VAST 0GB max  
   MODELING:
     TIME: '50:00:00'
