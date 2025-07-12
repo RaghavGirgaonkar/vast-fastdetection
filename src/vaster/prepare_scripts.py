@@ -593,8 +593,9 @@ def write_fixdata_txt_mortimer(args, fw, idx, filename, config, prefix=''):
     fw.write(prefix + text + '\n')
     fw.write('\n')
 
-    if config['VIRTUAL_ENV'] is True:
-        write_virtual_env_disable(fw, config)
+    if config['VASTER_SINGULARITY'] == False:
+        if config['VIRTUAL_ENV'] is True:
+            write_virtual_env_disable(fw, config)
 
 
 def write_imager_txt(args, fw, idx, filename, oname, config, mode='modeling', prefix=''):
@@ -718,8 +719,10 @@ def write_selcand_txt_mortimer(args, fw, idx, oname, config, cat, prefix='', aff
     fw.write(text + '\n')
     fw.write('\n')
 
-    if config['VIRTUAL_ENV'] is True:
-        write_virtual_env_disable(fw, config)
+    if config['VASTER_SINGULARITY'] == False:
+        if config['VIRTUAL_ENV'] is True:
+            write_virtual_env_disable(fw, config)
+            
 
 
 def write_clndata_txt(args, fw, idx, config):
@@ -1029,14 +1032,19 @@ def write_intervals_out_mortimer(args, fw, config, path_file, oname):
     # write_moduleload_mortimer(fw, config)
 
     savename = os.path.join(args.paths['path_data'], oname + '_measurements.txt')
-    fw.write(f'intervals=($(check_measurements {path_file} --config {args.self_config} --savename {savename}))' + '\n')
-    fw.write(r"intervals_out=${intervals[-1]}" + '\n')
-    fw.write('\n')
+    if config['VASTER_SINGULARITY'] is True:
+        fw.write(f'intervals=($('+ config['VASTER_PATH'] + ' ' + 'check_measurements {path_file} --config {args.self_config} --savename {savename}))' + '\n')
+        fw.write(r"intervals_out=${intervals[-1]}" + '\n')
+        fw.write('\n')
+    else:
+        fw.write(f'intervals=($(check_measurements {path_file} --config {args.self_config} --savename {savename}))' + '\n')
+        fw.write(r"intervals_out=${intervals[-1]}" + '\n')
+        fw.write('\n')
 
-    if config['VIRTUAL_ENV'] is True:
-        write_virtual_env_disable(fw, config)
+    if config['VASTER_SINGULARITY'] == False:
+        if config['VIRTUAL_ENV'] is True:
+            write_virtual_env_disable(fw, config)
     
-
 
 if __name__ == "__main__":
     _main()
