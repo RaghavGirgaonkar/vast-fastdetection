@@ -1,0 +1,49 @@
+Bootstrap: docker
+From: continuumio/miniconda3
+
+%files
+    /raid-15/LS/kaplan/raghav/vaster_singularity_image/environment.yml /opt/vaster/environment.yml
+    /raid-15/LS/kaplan/raghav/vaster_singularity_image/vast-fastdetection /opt/vaster/vast-fastdetection
+
+%environment
+    export PATH=/opt/conda/bin:$PATH
+    . /opt/conda/etc/profile.d/conda.sh
+    conda activate vaster_singularity
+    export CONDA_DEFAULT_ENV=vaster_singularity
+    export PYTHONPATH=/opt/vaster/vast-fastdetection:$PYTHONPATH
+    export PATH=/opt/conda/envs/vaster_singularity/bin:$PATH
+
+%post
+    # Create the Conda environment from the copied environment.yml
+    conda env create -f /opt/vaster/environment.yml
+    
+    # Ensure Conda is initialized before calling conda activate
+    . /opt/conda/etc/profile.d/conda.sh
+
+    # Activate the Conda environment
+    conda activate vaster_singularity
+
+    # Navigate to the vast-fastdetection directory and install vaster
+    cd /opt/vaster/vast-fastdetection
+    pip install .  # This will install vaster using pip from the local directory
+
+    # Add Conda environments bin directory to PATH
+    export PATH=$(conda info --base)/envs/vaster_singularity/bin:$PATH
+
+    # Clean up unnecessary Conda files to reduce image size
+    conda clean -a -y
+
+    # Activate the environment in every shell
+    echo "conda activate vaster_singularity" >> ~/.bashrc
+    echo "export PYTHONPATH=/opt/vaster/vast-fastdetection:$PYTHONPATH" >> ~/.bashrc
+
+%runscript
+    # Activate Conda environment
+    . /opt/conda/etc/profile.d/conda.sh
+    conda activate vaster_singularity
+
+    # Add Conda environment's bin directory to PATH
+    export PATH=$(conda info --base)/envs/vaster_singularity/bin:$PATH
+
+    # Run the command passed to the container
+    exec "$@"

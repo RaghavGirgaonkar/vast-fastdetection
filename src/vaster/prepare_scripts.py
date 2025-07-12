@@ -722,7 +722,7 @@ def write_selcand_txt_mortimer(args, fw, idx, oname, config, cat, prefix='', aff
     if config['VASTER_SINGULARITY'] == False:
         if config['VIRTUAL_ENV'] is True:
             write_virtual_env_disable(fw, config)
-            
+
 
 
 def write_clndata_txt(args, fw, idx, config):
@@ -1033,7 +1033,7 @@ def write_intervals_out_mortimer(args, fw, config, path_file, oname):
 
     savename = os.path.join(args.paths['path_data'], oname + '_measurements.txt')
     if config['VASTER_SINGULARITY'] is True:
-        fw.write(f'intervals=($('+ config['VASTER_PATH'] + ' ' + 'check_measurements {path_file} --config {args.self_config} --savename {savename}))' + '\n')
+        fw.write(f'intervals=($('+ config['VASTER_PATH'] + ' ' + f'check_measurements {path_file} --config {args.self_config} --savename {savename}))' + '\n')
         fw.write(r"intervals_out=${intervals[-1]}" + '\n')
         fw.write('\n')
     else:
